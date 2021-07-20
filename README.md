@@ -1,2 +1,2 @@
-# PowerShell
+# GetWeatherPSScript
 PowerShell Projects and Cmdlets
