@@ -1,0 +1,71 @@
+#Get-Weather Group Project
+#ActiveDirectoryRejects 
+#Matthew Robinson, Keith Harris, Wesley Lassiter, Jonathan Williams
+Function Get-Weather {
+    [CmdletBinding()]
+    #Creates parameters City, State, Days, and Unit. Used later in script
+    Param(
+        [Parameter(Position=0, Mandatory = $True, HelpMessage="Provide City", ValueFromPipeline = $true)]
+        $City,
+        [Parameter(Position=0, Mandatory = $True, HelpMessage="Provide State or Country", ValueFromPipeline = $true)]
+        $State,
+        [Parameter(Position=1, Mandatory = $True, HelpMessage="Provide number of days", ValueFromPipeline = $true)]
+        $Days,
+        [Parameter(Position=2, Mandatory = $True, HelpMessage="Provide Unit (C or F)", ValueFromPipeline = $true)]
+        $Unit
+    )
+    #Creates maxtemp and mintemp variables
+    $maxtemp = "maxtemp_$unit"
+    $mintemp = "mintemp_$unit"
+
+    #Displays City, State, Number of Days and Unit to User
+    write-host "City $city, State = $State, Number of Days = $days Unit = $unit"
+
+    #Creates Location variable adding City and State
+    $Location = "$city,"+,"$state"
+
+    #Displays City and State to User
+    Write-Host $location
+
+    #Specifies to stop script in response to an error occurring. Other options are Inquire, Continue and SilentlyContinue
+    $ErrorActionPreference = "Stop"
+
+    #Informs user of start of web request
+    Write-Host "Starting Web Request"
+
+    #Creates variable Weatherresults by entering location and days into Weather API web request
+    $Weatherresults ="http://api.weatherapi.com/v1/forecast.json?key=cb207b8029a14594bb522252211106&q=$location&days=$days"
+    
+    #Displaysweb request with user specified location and days included in url
+    write-host $Weatherresults
+
+    #Informs User of start of conversion of JSON result weatherresults
+    Write-Host "Converting JSON Results"
+
+    #Creates response variable. 
+    #(Invoke-RestMethod) Sends web request to RESTful web service to return data
+    #(Method Get)Uses get as the Method which retireves data
+    #(ResponseHeadersVariable) Saves HTTP header information as r
+    #(StatusCodeVariable) Save HTML response status code as s   
+    $response = Invoke-RestMethod -Uri $Weatherresults -Method Get -ResponseHeadersVariable r -StatusCodeVariable s
+
+    #Starts If loop when HTML status code equals 200 and creates response2 variable
+    if ( $s -eq 200) {
+        $response2 = New-Object -TypeName 'object[]' -ArgumentList $response.forecast.forecastday.date.count
+        for ( $i = 0; $i -lt $response.forecast.forecastday.date.count; $i++ ) {
+            $response2[$i] = [PSCustomObject]@{Date = $response.forecast.forecastday.date[$i];
+                "High Temp $unit" = $response.forecast.forecastday.day.$maxtemp[$i];
+                "Low Temp $unit" = $response.forecast.forecastday.day.$mintemp[$i];
+                "Chance of rain" = $response.forecast.forecastday.day.daily_chance_of_rain[$i] + "%";
+                "Conditions" = $response.forecast.forecastday.day.condition.text[$i]
+            }
+        }
+        $response2 | Format-Table -AutoSize
+        $response2 | Format-List -Verbose
+        $response2 | Out-GridView 
+    }
+    #If else then show HTTP Header Information including errors
+    else {
+        $r
+    }
+}
